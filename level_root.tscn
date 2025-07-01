@@ -1,0 +1,28 @@
+[gd_scene load_steps=6 format=3 uid="uid://dscaqq1qhd261"]
+
+[ext_resource type="Texture2D" uid="uid://dk64em86oat1w" path="res://placeholder_assets/tiles_placeholder.png" id="1_4d4qa"]
+[ext_resource type="Script" uid="uid://r4qx6lf2tmvs" path="res://DisplayGrid.gd" id="1_ndhg3"]
+[ext_resource type="Script" uid="uid://cxt4ghpdk7euw" path="res://PhysGrid.gd" id="1_qayhv"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_e5u8s"]
+texture = ExtResource("1_4d4qa")
+texture_region_size = Vector2i(8, 8)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_rix17"]
+tile_size = Vector2i(8, 8)
+sources/1 = SubResource("TileSetAtlasSource_e5u8s")
+
+[node name="LevelRoot" type="Node2D"]
+
+[node name="DisplayGrid" type="TileMapLayer" parent="."]
+tile_set = SubResource("TileSet_rix17")
+script = ExtResource("1_ndhg3")
+
+[node name="Physgrid" type="Node" parent="DisplayGrid"]
+script = ExtResource("1_qayhv")
