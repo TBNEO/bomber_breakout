@@ -8,7 +8,8 @@ enum BLOCKTYPE {
 	Steel, 
 	Water, 
 	Oil, 
-	Acid
+	Acid,
+	Keybox
 }
 
 class PhysBlock:
@@ -16,29 +17,66 @@ class PhysBlock:
 	var burning: bool = false
 	var fluid: bool
 	
-	var type: BLOCKTYPE
-	var pos: Vector2i
+	var type: BLOCKTYPE:
+		set(value):
+			match value:
+				BLOCKTYPE.Empty:
+					blockHP = 1
+					fluid = false
+				BLOCKTYPE.Wood:
+					blockHP = 1
+					fluid = false
+				BLOCKTYPE.Steel:
+					blockHP = 3
+					fluid = false
+				BLOCKTYPE.Water:
+					blockHP = 1
+					fluid = true
+				BLOCKTYPE.Oil:
+					blockHP = 1
+					fluid = true
+				BLOCKTYPE.Acid:
+					blockHP = 1
+					fluid = true
+				BLOCKTYPE.Keybox:
+					blockHP = 1
+					fluid = false
+			type = value
 	var neighbors: Dictionary[Vector2i, PhysBlock] = {}
 	
-	signal destroyed(coord: Vector2i, type: BLOCKTYPE)
+	var updated: bool = false
 	
-	func _init(new_type: BLOCKTYPE, coord: Vector2i) -> void:
-		pos = coord
+	func _init(new_type: BLOCKTYPE) -> void:
 		type = new_type
-		blockHP = 1
-		fluid = false
-		if new_type == BLOCKTYPE.Steel:
-			blockHP = 3
-		elif (
-			new_type == BLOCKTYPE.Water or 
-			new_type == BLOCKTYPE.Oil or 
-			new_type == BLOCKTYPE.Acid
-		):
-			fluid = true
 	
-	func update(damage: int, targetcoord: Vector2i) -> void:
-		if !fluid:
-			pass
+	func update(damage: int = 0) -> void:
+		if fluid:
+			var downblock = neighbors.get(Vector2i.DOWN)
+			if downblock:
+				if downblock.type == BLOCKTYPE.Empty:
+					downblock.type = type
+					type = BLOCKTYPE.Empty
+				elif downblock.type == BLOCKTYPE.Oil and type == BLOCKTYPE.Water:
+					downblock.type = BLOCKTYPE.Water
+					type = BLOCKTYPE.Oil
+				else:
+					var switch = randi() % 2
+					if switch == 0: switch = -1
+					var sideblock = neighbors.get(Vector2i(switch, 0))
+					if sideblock:
+						if sideblock.type == BLOCKTYPE.Empty:
+							sideblock.type = type
+							type = BLOCKTYPE.Empty
+			else:
+				var switch = randi() % 2
+				if switch == 0: switch = -1
+				var sideblock = neighbors.get(Vector2i(switch, 0))
+				if sideblock:
+					if sideblock.type == BLOCKTYPE.Empty:
+						sideblock.type = type
+						type = BLOCKTYPE.Empty
+				else:
+					type = BLOCKTYPE.Empty
 		else:
 			if damage > 0:
 				blockHP -= damage
@@ -46,31 +84,92 @@ class PhysBlock:
 					if type == BLOCKTYPE.Bomb:
 						for n in neighbors.values():
 							if n:
-								n.update(1, n.pos)
-					destroyed.emit()
+								n.update(1)
 					type = BLOCKTYPE.Empty
+		updated = true
 
 var GRIDDATA: Dictionary[Vector2i, PhysBlock] = {}
+var KeyboxList: Array[Vector2i] = []
 var DisplayData: Dictionary[Vector2i, BLOCKTYPE] = {}
 
-signal updated
+signal updated_s
+
+var update_tick: int = 6
+
+const GRIDSIZEX: int = 32
+const GRIDSIZEY: int = 16
 
 func _ready() -> void:
-	for x in range(16):
-		for y in range(16):
-			var newblock = PhysBlock.new(BLOCKTYPE.Empty, Vector2i(x,y))
+	for x in range(GRIDSIZEX, -1, -1):
+		for y in range(GRIDSIZEY, -1, -1):
+			var newblock = PhysBlock.new(BLOCKTYPE.Empty)
 			GRIDDATA[Vector2i(x,y)] = newblock
 	for b in GRIDDATA.values():
-		var adjacent = {
-			b.pos + Vector2i(1,0) : GRIDDATA[b.pos + Vector2i(1,0)],
-			b.pos + Vector2i(-1,0) : GRIDDATA[b.pos + Vector2i(-1,0)],
-			b.pos + Vector2i(0,1) : GRIDDATA[b.pos + Vector2i(0,1)],
-			b.pos + Vector2i(0,-1) : GRIDDATA[b.pos + Vector2i(0,-1)],
+		var adjacent: Dictionary[Vector2i, PhysBlock] = {
+			Vector2i.RIGHT : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.RIGHT),
+			Vector2i.LEFT : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.LEFT),
+			Vector2i.DOWN : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.DOWN),
+			Vector2i.UP : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.UP),
 		}
 		b.neighbors = adjacent
 
-func _process(delta: float) -> void:
-	var updategrid = GRIDDATA.duplicate()
-	for coord in updategrid.keys():
-		var block = updategrid[coord]
+func _process(_delta: float) -> void:
+	if update_tick <= 0:
+		update_tick = 10
+	else:
+		update_tick -= 1
+		return
+	
+	for coord in GRIDDATA.keys():
+		var block = GRIDDATA[coord]
+		if !block.updated:
+			block.update()
+	
+	for b in GRIDDATA.values():
+		b.updated = false
+	
+	for v in GRIDDATA.keys():
+		DisplayData[v] = GRIDDATA.get(v).type
+	updated_s.emit()
+	
+
+func detonate(coord: Vector2i) -> void:
+	if GRIDDATA.has(coord):
+		for c in GRIDDATA[coord].neighbors.values():
+			c.update(1)
+		GRIDDATA[coord].update(1)
 		
+
+func generate_from_res(file: String) -> bool:
+	var targetfile: LevelData = load(file)
+	if !targetfile or targetfile.GRID.is_empty(): return false
+	
+	for v: Vector2i in targetfile.GRID.keys():
+		var b: int = targetfile.GRID.get(v)
+		var datablock: PhysBlock
+		match b:
+			-1: 
+				datablock = PhysBlock.new(BLOCKTYPE.Empty)
+			0:
+				datablock = PhysBlock.new(BLOCKTYPE.Wood)
+			1: 
+				datablock = PhysBlock.new(BLOCKTYPE.Bomb)
+			2: 
+				datablock = PhysBlock.new(BLOCKTYPE.Steel)
+			3: 
+				datablock = PhysBlock.new(BLOCKTYPE.Water)
+			4: 
+				datablock = PhysBlock.new(BLOCKTYPE.Oil)
+			5: 
+				datablock = PhysBlock.new(BLOCKTYPE.Acid)
+			6: 
+				datablock = PhysBlock.new(BLOCKTYPE.Keybox)
+				KeyboxList.append(v)
+			_: return false
+		if datablock: 
+			GRIDDATA[v] = datablock
+		else:
+			return false
+	
+	return true
+	
