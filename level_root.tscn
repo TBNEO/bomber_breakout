@@ -1,8 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://dscaqq1qhd261"]
+[gd_scene load_steps=6 format=4 uid="uid://dscaqq1qhd261"]
 
 [ext_resource type="Texture2D" uid="uid://dk64em86oat1w" path="res://placeholder_assets/tiles_placeholder.png" id="1_4d4qa"]
-[ext_resource type="Script" uid="uid://r4qx6lf2tmvs" path="res://DisplayGrid.gd" id="1_ndhg3"]
-[ext_resource type="Script" uid="uid://cxt4ghpdk7euw" path="res://PhysGrid.gd" id="1_qayhv"]
+[ext_resource type="Script" uid="uid://r4qx6lf2tmvs" path="res://grid/DisplayGrid.gd" id="1_ndhg3"]
+[ext_resource type="Script" uid="uid://cxt4ghpdk7euw" path="res://grid/PhysGrid.gd" id="1_qayhv"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_e5u8s"]
 texture = ExtResource("1_4d4qa")
@@ -20,7 +20,8 @@ sources/1 = SubResource("TileSetAtlasSource_e5u8s")
 
 [node name="LevelRoot" type="Node2D"]
 
-[node name="DisplayGrid" type="TileMapLayer" parent="."]
+[node name="DisplayGrid" type="TileMapLayer" parent="." groups=["Grid"]]
+tile_map_data = PackedByteArray("AAAPAAoAAQAAAAAAAAAPAAsAAQAAAAAAAAAOAAwAAQAAAAAAAAANAAwAAQAAAAAAAAAMAAwAAQAAAAAAAAALAAoAAQAAAAAAAAAOAAQAAQADAAAAAAANAAQAAQADAAAAAAAMAAQAAQADAAAAAAAMAAUAAQADAAAAAAALAAsAAQAAAAAAAAAQAAkAAQAAAAAAAAAKAAkAAQAAAAAAAAA=")
 tile_set = SubResource("TileSet_rix17")
 script = ExtResource("1_ndhg3")
 

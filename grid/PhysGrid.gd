@@ -52,31 +52,26 @@ class PhysBlock:
 	func update(damage: int = 0) -> void:
 		if fluid:
 			var downblock = neighbors.get(Vector2i.DOWN)
+			var switch = randi() % 2
+			if switch == 0: switch = -1
+			var sideblock = neighbors.get(Vector2i(switch, 0))
 			if downblock:
 				if downblock.type == BLOCKTYPE.Empty:
 					downblock.type = type
 					type = BLOCKTYPE.Empty
+					downblock.updated = true
 				elif downblock.type == BLOCKTYPE.Oil and type == BLOCKTYPE.Water:
 					downblock.type = BLOCKTYPE.Water
 					type = BLOCKTYPE.Oil
+					downblock.updated = true
 				else:
-					var switch = randi() % 2
-					if switch == 0: switch = -1
-					var sideblock = neighbors.get(Vector2i(switch, 0))
 					if sideblock:
 						if sideblock.type == BLOCKTYPE.Empty:
 							sideblock.type = type
 							type = BLOCKTYPE.Empty
+							sideblock.updated = true
 			else:
-				var switch = randi() % 2
-				if switch == 0: switch = -1
-				var sideblock = neighbors.get(Vector2i(switch, 0))
-				if sideblock:
-					if sideblock.type == BLOCKTYPE.Empty:
-						sideblock.type = type
-						type = BLOCKTYPE.Empty
-				else:
-					type = BLOCKTYPE.Empty
+				type = BLOCKTYPE.Empty
 		else:
 			if damage > 0:
 				blockHP -= damage
@@ -94,33 +89,22 @@ var DisplayData: Dictionary[Vector2i, BLOCKTYPE] = {}
 
 signal updated_s
 
-var update_tick: int = 6
+var update_tick: int = tickrate
+const tickrate: int = 60
 
 const GRIDSIZEX: int = 32
 const GRIDSIZEY: int = 16
 
-func _ready() -> void:
-	for x in range(GRIDSIZEX, -1, -1):
-		for y in range(GRIDSIZEY, -1, -1):
-			var newblock = PhysBlock.new(BLOCKTYPE.Empty)
-			GRIDDATA[Vector2i(x,y)] = newblock
-	for b in GRIDDATA.values():
-		var adjacent: Dictionary[Vector2i, PhysBlock] = {
-			Vector2i.RIGHT : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.RIGHT),
-			Vector2i.LEFT : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.LEFT),
-			Vector2i.DOWN : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.DOWN),
-			Vector2i.UP : GRIDDATA.get(GRIDDATA.find_key(b) + Vector2i.UP),
-		}
-		b.neighbors = adjacent
-
 func _process(_delta: float) -> void:
 	if update_tick <= 0:
-		update_tick = 10
+		update_tick = tickrate
 	else:
 		update_tick -= 1
 		return
 	
-	for coord in GRIDDATA.keys():
+	var inverse_keys = GRIDDATA.keys().duplicate()
+	inverse_keys.reverse()
+	for coord in inverse_keys:
 		var block = GRIDDATA[coord]
 		if !block.updated:
 			block.update()
@@ -140,36 +124,42 @@ func detonate(coord: Vector2i) -> void:
 		GRIDDATA[coord].update(1)
 		
 
-func generate_from_res(file: String) -> bool:
-	var targetfile: LevelData = load(file)
-	if !targetfile or targetfile.GRID.is_empty(): return false
+func generate(dict: Dictionary) -> void:
+	for x in range(GRIDSIZEX):
+		for y in range(GRIDSIZEY):
+			var v = Vector2i(x,y)
+			var b = -1
+			if dict.has(v):
+				b = dict[v]
+			var datablock: PhysBlock
+			match b:
+				-1: 
+					datablock = PhysBlock.new(BLOCKTYPE.Empty)
+				0:
+					datablock = PhysBlock.new(BLOCKTYPE.Wood)
+				1: 
+					datablock = PhysBlock.new(BLOCKTYPE.Bomb)
+				2: 
+					datablock = PhysBlock.new(BLOCKTYPE.Steel)
+				3: 
+					datablock = PhysBlock.new(BLOCKTYPE.Water)
+				4: 
+					datablock = PhysBlock.new(BLOCKTYPE.Oil)
+				5: 
+					datablock = PhysBlock.new(BLOCKTYPE.Acid)
+				6: 
+					datablock = PhysBlock.new(BLOCKTYPE.Keybox)
+					KeyboxList.append(v)
+			if datablock: 
+				GRIDDATA[v] = datablock
 	
-	for v: Vector2i in targetfile.GRID.keys():
-		var b: int = targetfile.GRID.get(v)
-		var datablock: PhysBlock
-		match b:
-			-1: 
-				datablock = PhysBlock.new(BLOCKTYPE.Empty)
-			0:
-				datablock = PhysBlock.new(BLOCKTYPE.Wood)
-			1: 
-				datablock = PhysBlock.new(BLOCKTYPE.Bomb)
-			2: 
-				datablock = PhysBlock.new(BLOCKTYPE.Steel)
-			3: 
-				datablock = PhysBlock.new(BLOCKTYPE.Water)
-			4: 
-				datablock = PhysBlock.new(BLOCKTYPE.Oil)
-			5: 
-				datablock = PhysBlock.new(BLOCKTYPE.Acid)
-			6: 
-				datablock = PhysBlock.new(BLOCKTYPE.Keybox)
-				KeyboxList.append(v)
-			_: return false
-		if datablock: 
-			GRIDDATA[v] = datablock
-		else:
-			return false
-	
-	return true
+	for g in GRIDDATA.keys():
+		var b = GRIDDATA.get(g)
+		var n: Dictionary[Vector2i, PhysBlock] = {
+			Vector2i.UP: GRIDDATA.get(g + Vector2i.UP),
+			Vector2i.DOWN: GRIDDATA.get(g + Vector2i.DOWN),
+			Vector2i.LEFT: GRIDDATA.get(g + Vector2i.LEFT),
+			Vector2i.RIGHT: GRIDDATA.get(g + Vector2i.RIGHT)
+		}
+		b.neighbors = n
 	

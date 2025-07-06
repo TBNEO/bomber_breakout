@@ -5,6 +5,12 @@ class_name DisplayGrid
 
 func _ready() -> void:
 	physgrid.updated_s.connect(update_display)
+	
+	var cells = {}
+	for c in get_used_cells():
+		cells[c] = get_cell_atlas_coords(c).x
+	
+	physgrid.generate(cells)
 
 func update_display() -> void:
 	for k in physgrid.DisplayData.keys():
@@ -25,7 +31,3 @@ func update_display() -> void:
 			_:
 				erase_cell(k)
 			
-
-func _unhandled_input(event: InputEvent) -> void:
-	if Input.is_action_just_pressed("click"):
-		physgrid.detonate(local_to_map(get_local_mouse_position()))
