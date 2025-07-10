@@ -1,21 +1,26 @@
-[gd_scene load_steps=6 format=4 uid="uid://dscaqq1qhd261"]
+[gd_scene load_steps=7 format=4 uid="uid://dscaqq1qhd261"]
 
 [ext_resource type="Texture2D" uid="uid://dk64em86oat1w" path="res://placeholder_assets/tiles_placeholder.png" id="1_4d4qa"]
 [ext_resource type="Script" uid="uid://r4qx6lf2tmvs" path="res://grid/DisplayGrid.gd" id="1_ndhg3"]
 [ext_resource type="Script" uid="uid://cxt4ghpdk7euw" path="res://grid/PhysGrid.gd" id="1_qayhv"]
+[ext_resource type="PackedScene" uid="uid://cqb41iy75ydqx" path="res://player/player.tscn" id="4_e5u8s"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_e5u8s"]
 texture = ExtResource("1_4d4qa")
 texture_region_size = Vector2i(8, 8)
 0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)
 1:0/0 = 0
+1:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)
 2:0/0 = 0
+2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-4, -4, 4, -4, 4, 4, -4, 4)
 3:0/0 = 0
 4:0/0 = 0
 5:0/0 = 0
 
 [sub_resource type="TileSet" id="TileSet_rix17"]
 tile_size = Vector2i(8, 8)
+physics_layer_0/collision_layer = 1
 sources/1 = SubResource("TileSetAtlasSource_e5u8s")
 
 [node name="LevelRoot" type="Node2D"]
@@ -27,3 +32,6 @@ script = ExtResource("1_ndhg3")
 
 [node name="Physgrid" type="Node" parent="DisplayGrid"]
 script = ExtResource("1_qayhv")
+
+[node name="Player" parent="." instance=ExtResource("4_e5u8s")]
+position = Vector2(20, 161)

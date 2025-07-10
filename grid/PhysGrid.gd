@@ -75,7 +75,8 @@ class PhysBlock:
 		else:
 			if damage > 0:
 				blockHP -= damage
-				if blockHP <= 0:
+				if blockHP <= 0 and type != BLOCKTYPE.Empty:
+					print("broken")
 					if type == BLOCKTYPE.Bomb:
 						for n in neighbors.values():
 							if n:
@@ -91,11 +92,13 @@ signal updated_s
 
 var update_tick: int = tickrate
 const tickrate: int = 60
+var running: bool = false
 
 const GRIDSIZEX: int = 32
 const GRIDSIZEY: int = 16
 
 func _process(_delta: float) -> void:
+	if !running: return
 	if update_tick <= 0:
 		update_tick = tickrate
 	else:
@@ -120,9 +123,13 @@ func _process(_delta: float) -> void:
 func detonate(coord: Vector2i) -> void:
 	if GRIDDATA.has(coord):
 		for c in GRIDDATA[coord].neighbors.values():
+			if !c: continue
 			c.update(1)
 		GRIDDATA[coord].update(1)
-		
+	for v in GRIDDATA.keys():
+		DisplayData[v] = GRIDDATA.get(v).type
+	updated_s.emit()
+	if !running: running = true
 
 func generate(dict: Dictionary) -> void:
 	for x in range(GRIDSIZEX):
